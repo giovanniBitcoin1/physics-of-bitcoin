@@ -14,22 +14,21 @@ from datetime import date
 import os, sys
 
 API_KEY  = os.environ.get('NEWHEDGE_API_KEY', '')
-BASE_URL = 'https://newhedge.io/api/v1/analytics'
 GENESIS  = date(2009, 1, 3)
 
 # ── Fetch ──────────────────────────────────────────────────────────────────
 def fetch_price():
-    r = requests.get(f'{BASE_URL}/bitcoin_live_price',
-                     params={'interval': '1_day',
-                             'ytdMode': 'off',
-                             'api_token': API_KEY},
-                     timeout=30)
+    # Public endpoint — no token required for price data
+    r = requests.get(
+        'https://newhedge.io/api/v1/analytics/bitcoin_live_price',
+        params={'interval': '1_day', 'ytdMode': 'off'},
+        timeout=30)
     r.raise_for_status()
-    # Response is array of [timestamp_ms, price] pairs
-    data = r.json()
-    df = pd.DataFrame(data, columns=['timestamp_ms', 'close'])
-    df['date']  = pd.to_datetime(df['timestamp_ms'], unit='ms').dt.date
-    df['close'] = df['close'].astype(float)
+    # Response: {"data": [{"p": price, "t": timestamp_seconds}, ...]}
+    data = r.json()['data']
+    df = pd.DataFrame(data)
+    df['date']  = pd.to_datetime(df['t'], unit='s').dt.date
+    df['close'] = df['p'].astype(float)
     return df[['date', 'close']].dropna().sort_values('date').reset_index(drop=True)
 
 # ── Figure ─────────────────────────────────────────────────────────────────
@@ -108,7 +107,7 @@ def make_figure(df, out='docs/bitcoin_powerlaw.png'):
         fontsize=10.5, color=DARK, pad=10, loc='left', style='italic')
 
     ax.text(0.99, 0.03,
-            f'Updated {date.today()}  ·  physicsofbitcoin.com',
+            f'Updated {date.today()}  ·  thephysicsofbitcoin.com',
             ha='right', va='bottom', fontsize=8, color=GREY,
             transform=ax.transAxes, style='italic')
 
@@ -125,11 +124,8 @@ def make_figure(df, out='docs/bitcoin_powerlaw.png'):
 
 # ── Main ───────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    if not API_KEY:
-        print('ERROR: NEWHEDGE_API_KEY not set.')
-        sys.exit(1)
     print('Fetching data...')
     df = fetch_price()
-    print(f'  {len(df)} rows  ({df["date"].iloc[0]} → {df["date"].iloc[-1]})')
+    print(f'  {len(df)} rows  ({df["date"].iloc[0]} -> {df["date"].iloc[-1]})')
     make_figure(df)
     print('Done.')
