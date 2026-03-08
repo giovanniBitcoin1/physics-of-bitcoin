@@ -14,24 +14,21 @@ from datetime import date
 import os, sys
 
 API_KEY  = os.environ.get('NEWHEDGE_API_KEY', '')
-BASE_URL = 'https://api.newhedge.io'
+BASE_URL = 'https://newhedge.io/api/v1/analytics'
 GENESIS  = date(2009, 1, 3)
 
 # ── Fetch ──────────────────────────────────────────────────────────────────
 def fetch_price():
-    headers = {'Authorization': f'Bearer {API_KEY}'}
-    r = requests.get(f'{BASE_URL}/v1/ohlcv',
-                     params={'symbol': 'BTC/USD', 'interval': '1d',
-                             'start': '2009-01-03', 'limit': 10000},
-                     headers=headers, timeout=30)
+    r = requests.get(f'{BASE_URL}/bitcoin_live_price',
+                     params={'interval': '1_day',
+                             'ytdMode': 'off',
+                             'api_token': API_KEY},
+                     timeout=30)
     r.raise_for_status()
-    df = pd.DataFrame(r.json())
-    df.columns = [c.lower() for c in df.columns]
-    # Handle timestamp or date column
-    if 'timestamp' in df.columns:
-        df['date'] = pd.to_datetime(df['timestamp'], unit='ms').dt.date
-    else:
-        df['date'] = pd.to_datetime(df['date']).dt.date
+    # Response is array of [timestamp_ms, price] pairs
+    data = r.json()
+    df = pd.DataFrame(data, columns=['timestamp_ms', 'close'])
+    df['date']  = pd.to_datetime(df['timestamp_ms'], unit='ms').dt.date
     df['close'] = df['close'].astype(float)
     return df[['date', 'close']].dropna().sort_values('date').reset_index(drop=True)
 
