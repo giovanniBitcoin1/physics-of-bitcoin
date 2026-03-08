@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Physics of Bitcoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Courier+Prime:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #0e1018;
+    --paper:      #f4f0e8;
+    --paper-dark: #e8e2d4;
+    --teal:       #2a7a72;
+    --teal-light: #4EC9C0;
+    --gold:       #b8962a;
+    --muted:      #6a6658;
+    --rule:       #c8c0b0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Noise texture overlay ─────────────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── Header rule ───────────────────────────────────────────────────── */
+  .top-rule {
+    height: 4px;
+    background: linear-gradient(90deg, var(--teal), var(--gold), var(--teal));
+  }
+
+  /* ── Nav ───────────────────────────────────────────────────────────── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 3rem;
+    border-bottom: 1px solid var(--rule);
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--teal); }
+
+  /* ── Hero ──────────────────────────────────────────────────────────── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 88vh;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero-left {
+    padding: 6rem 4rem 4rem 5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--rule);
+  }
+
+  .hero-eyebrow {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 1.8rem;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 4vw, 4.2rem);
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.3em;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--teal);
+  }
+
+  .hero-author {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.6rem 0 2.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .hero-description {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--muted);
+    max-width: 420px;
+    margin-bottom: 3rem;
+    line-height: 1.75;
+  }
+
+  /* ── Buy buttons ───────────────────────────────────────────────────── */
+  .buy-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-width: 340px;
+  }
+
+  .buy-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.4rem;
+    border: 1px solid;
+    text-decoration: none;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.0rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    transition: all 0.22s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.22s;
+  }
+  .btn:hover::before { opacity: 0.06; }
+
+  .btn-primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #f4f0e8;
+  }
+  .btn-primary:hover {
+    background: #235f58;
+    border-color: #235f58;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(42,122,114,0.25);
+  }
+
+  .btn-soon {
+    background: transparent;
+    border-color: var(--rule);
+    color: var(--muted);
+    cursor: default;
+    opacity: 0.65;
+  }
+
+  .btn-format {
+    font-size: 0.85rem;
+    font-family: 'Courier Prime', monospace;
+    letter-spacing: 0.06em;
+  }
+
+  .btn-arrow { font-size: 1.1rem; opacity: 0.7; }
+
+  .soon-tag {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: var(--paper-dark);
+    padding: 0.18em 0.5em;
+    border-radius: 2px;
+    color: var(--muted);
+  }
+
+  /* ── Hero right: figure panel ──────────────────────────────────────── */
+  .hero-right {
+    background: var(--paper-dark);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 3rem 2.5rem;
+    position: relative;
+  }
+
+  .figure-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+    align-self: flex-start;
+  }
+
+  .figure-container {
+    width: 100%;
+    max-width: 560px;
+    border: 1px solid var(--rule);
+    background: white;
+    padding: 0.5rem;
+  }
+
+  .figure-container img {
+    width: 100%;
+    display: block;
+  }
+
+  .figure-caption {
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--muted);
+    margin-top: 1rem;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.55;
+  }
+
+  /* Spinner while image loads */
+  .figure-container {
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .figure-container img { display: none; }
+  .figure-container img.loaded { display: block; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--rule);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Divider rule ──────────────────────────────────────────────────── */
+  .section-rule {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 3.5rem 5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-rule::before,
+  .section-rule::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+  .section-rule-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ── About section ─────────────────────────────────────────────────── */
+  .about {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .about-left {
+    padding: 4rem 3rem 4rem 5rem;
+    border-right: 1px solid var(--rule);
+  }
+
+  .about-right {
+    padding: 4rem 5rem 4rem 4rem;
+  }
+
+  .section-number {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--teal);
+    display: block;
+    margin-bottom: 1.2rem;
+  }
+
+  h2 {
+    font-size: 1.9rem;
+    font-weight: 300;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  .body-text {
+    font-size: 1.0rem;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.8;
+    max-width: 560px;
+  }
+  .body-text + .body-text { margin-top: 1.2rem; }
+
+  /* ── Pull quote ────────────────────────────────────────────────────── */
+  .pull-quote {
+    margin: 2.5rem 0;
+    padding: 1.5rem 2rem;
+    border-left: 3px solid var(--teal);
+    background: var(--paper-dark);
+  }
+  .pull-quote p {
+    font-size: 1.15rem;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1.65;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────────── */
+  footer {
+    padding: 2.5rem 5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+  }
+
+  /* ── Animations ────────────────────────────────────────────────────── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: fadeUp 0.7s ease forwards;
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .delay-1 { animation-delay: 0.12s; }
+  .delay-2 { animation-delay: 0.24s; }
+  .delay-3 { animation-delay: 0.36s; }
+  .delay-4 { animation-delay: 0.48s; }
+  .delay-5 { animation-delay: 0.60s; }
+
+  /* ── Responsive ────────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-left { padding: 3rem 2rem; border-right: none; border-bottom: 1px solid var(--rule); }
+    .hero-right { padding: 2.5rem 2rem; }
+    .about { grid-template-columns: 1fr; }
+    .about-left { border-right: none; border-bottom: 1px solid var(--rule); padding: 2.5rem 2rem; }
+    .about-right { padding: 2.5rem 2rem; }
+    nav { padding: 1rem 1.5rem; }
+    footer { padding: 1.5rem 2rem; flex-direction: column; gap: 0.8rem; text-align: center; }
+    .section-rule { padding: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-rule"></div>
+
+<nav>
+  <span>The Physics of Bitcoin</span>
+  <span>Giovanni Santostasi</span>
+  <span>Scientific Bitcoin Institute</span>
+</nav>
+
+<!-- ── HERO ───────────────────────────────────────────────────────────── -->
+<section class="hero">
+
+  <div class="hero-left">
+    <p class="hero-eyebrow fade-in">Now Available</p>
+
+    <h1 class="fade-in delay-1">
+      The Physics<br>of <em>Bitcoin</em>
+    </h1>
+
+    <p class="hero-author fade-in delay-2">Giovanni Santostasi</p>
+
+    <p class="hero-description fade-in delay-3">
+      A rigorous, quantitative account of Bitcoin's growth dynamics —
+      showing that the power law governing its price is not a statistical
+      curiosity but the signature of a physical system governed by
+      scale invariance and renormalization group fixed points.
+    </p>
+
+    <div class="buy-section fade-in delay-4">
+      <p class="buy-label">Available now</p>
+
+      <a href="https://www.amazon.com/dp/B0GQSYF9PR"
+         target="_blank" rel="noopener"
+         class="btn btn-primary">
+        <span>
+          <span class="btn-format">Kindle Edition</span><br>
+          Amazon
+        </span>
+        <span class="btn-arrow">→</span>
+      </a>
+
+      <p class="buy-label" style="margin-top:0.6rem">Coming soon</p>
+
+      <span class="btn btn-soon">
+        <span>
+          <span class="btn-format">Paperback Edition</span><br>
+          Amazon
+        </span>
+        <span class="soon-tag">Coming soon</span>
+      </span>
+
+      <span class="btn btn-soon">
+        <span>
+          <span class="btn-format">Hardcover Edition</span><br>
+          Amazon
+        </span>
+        <span class="soon-tag">Coming soon</span>
+      </span>
+
+      <span class="btn btn-soon">
+        <span>
+          <span class="btn-format">Audiobook</span><br>
+          &nbsp;
+        </span>
+        <span class="soon-tag">Coming soon</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Live figure -->
+  <div class="hero-right">
+    <p class="figure-label fade-in">Live data · updated daily</p>
+
+    <div class="figure-container fade-in delay-2" id="figWrap">
+      <div class="spinner" id="spinner"></div>
+      <img id="powerlaw-fig"
+           src="https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/physics-of-bitcoin/main/docs/bitcoin_powerlaw.png"
+           alt="Bitcoin price power law — log-log plot"
+           onload="imgLoaded()"
+           onerror="imgError()">
+    </div>
+
+    <p class="figure-caption fade-in delay-3">
+      <strong>Figure 1.</strong> Bitcoin price vs. time on a log-log scale.
+      The straight line — fitted across the full history from genesis to today —
+      confirms P(t) ∝ t <sup>5.9</sup>. Updated every 24 hours.
+    </p>
+  </div>
+
+</section>
+
+<!-- ── ABOUT ───────────────────────────────────────────────────────────── -->
+<div class="section-rule">
+  <span class="section-rule-label">About the book</span>
+</div>
+
+<section class="about">
+  <div class="about-left">
+    <span class="section-number">01 — Premise</span>
+    <h2>A physical law,<br>not a curve fit</h2>
+    <p class="body-text">
+      Most analyses of Bitcoin treat its price history as a sequence
+      of speculative episodes. This book treats it as data from a
+      physical system — and asks what that data implies about the
+      underlying structure of the network.
+    </p>
+  </div>
+
+  <div class="about-right">
+
+    <div class="pull-quote">
+      <p>"The power law is not discovered by fitting a line to a log-log plot.
+      It is predicted by the physics — by the renormalization group fixed point
+      that governs every scale-free network that has grown to sufficient size."</p>
+    </div>
+
+    <p class="body-text">
+      The central finding is that Bitcoin's price follows a power law in time
+      with exponent approximately 5.9 — a relationship that has held across
+      thirteen years, six orders of magnitude in price, four halving cycles,
+      multiple regulatory crises, and the full range of market conditions.
+      A relationship this stable, across a range this wide, is not a
+      coincidence. It is a law.
+    </p>
+
+    <p class="body-text" style="margin-top:1.2rem">
+      The book derives this law from first principles — from the mathematics
+      of scale-free networks, preferential attachment, Metcalfe value scaling,
+      and the renormalization group — and shows that the observed exponent
+      of 5.9 is a quantitative prediction of the theory, not a parameter
+      fitted to the data.
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────────── -->
+<footer>
+  <span>© 2025 Giovanni Santostasi</span>
+  <span>Scientific Bitcoin Institute</span>
+  <span>The Physics of Bitcoin</span>
+</footer>
+
+<script>
+  function imgLoaded() {
+    document.getElementById('spinner').style.display = 'none';
+    const img = document.getElementById('powerlaw-fig');
+    img.classList.add('loaded');
+    document.getElementById('figWrap').style.minHeight = 'unset';
+  }
+  function imgError() {
+    document.getElementById('spinner').style.display = 'none';
+    const figWrap = document.getElementById('figWrap');
+    figWrap.innerHTML =
+      '<p style="font-family:\'Courier Prime\',monospace;font-size:0.75rem;' +
+      'color:#6a6658;letter-spacing:0.08em;padding:2rem;text-align:center">' +
+      'Figure updating — check back shortly.</p>';
+  }
+</script>
+
+</body>
+</html>
