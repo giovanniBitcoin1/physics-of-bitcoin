@@ -1,0 +1,36 @@
+name: Update Bitcoin Power Law Figure
+
+on:
+  schedule:
+    - cron: '0 8 * * *'    # every day at 08:00 UTC (markets well settled)
+  workflow_dispatch:         # manual trigger button in GitHub UI
+
+jobs:
+  update-figure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pandas numpy matplotlib
+
+      - name: Generate figure
+        env:
+          NEWHEDGE_API_KEY: ${{ secrets.NEWHEDGE_API_KEY }}
+        run: python generate_figure.py
+
+      - name: Commit and push updated figure
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/bitcoin_powerlaw.png
+          git diff --cached --quiet || \
+            git commit -m "chore: update power law figure $(date -u '+%Y-%m-%d')"
+          git push
