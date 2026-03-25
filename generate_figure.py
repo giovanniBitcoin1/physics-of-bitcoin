@@ -24,7 +24,7 @@ def fetch_price():
         timeout=30)
     r.raise_for_status()
     # Response: {"data": [{"p": price, "t": timestamp_seconds}, ...]}
-    data = r.json()['data']
+    data = r.json()
     df = pd.DataFrame(data)
     df['date']  = pd.to_datetime(df['t'], unit='s').dt.date
     df['close'] = df['p'].astype(float)
