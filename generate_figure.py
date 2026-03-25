@@ -18,10 +18,9 @@ GENESIS  = date(2009, 1, 3)
 
 # ── Fetch ──────────────────────────────────────────────────────────────────
 def fetch_price():
-    # Public endpoint — no token required for price data
     r = requests.get(
-        'https://newhedge.io/api/v1/analytics/bitcoin_live_price',
-        params={'interval': '1_day', 'ytdMode': 'off'},
+        'https://newhedge.io/api/v2/price/historical',
+        params={'api_token': API_KEY},
         timeout=30)
     r.raise_for_status()
     # Response: {"data": [{"p": price, "t": timestamp_seconds}, ...]}
