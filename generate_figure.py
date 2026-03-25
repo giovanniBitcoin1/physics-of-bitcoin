@@ -23,10 +23,10 @@ def fetch_price():
         params={'api_token': API_KEY},
         timeout=30)
     r.raise_for_status()
-    # Response: {"data": [{"p": price, "t": timestamp_seconds}, ...]}
+    # Response: array of [timestamp_ms, price] pairs
     data = r.json()
-    df = pd.DataFrame(data)
-    df['date']  = pd.to_datetime(df['t'], unit='s').dt.date
+    df = pd.DataFrame(data, columns=['t', 'p'])
+    df['date']  = pd.to_datetime(df['t'], unit='ms').dt.date
     df['close'] = df['p'].astype(float)
     return df[['date', 'close']].dropna().sort_values('date').reset_index(drop=True)
 
@@ -128,3 +128,4 @@ if __name__ == '__main__':
     print(f'  {len(df)} rows  ({df["date"].iloc[0]} -> {df["date"].iloc[-1]})')
     make_figure(df)
     print('Done.')
+
