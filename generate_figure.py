@@ -89,11 +89,22 @@ def make_figure(df, out='docs/bitcoin_powerlaw.png'):
               markeredgecolor=DARK, markeredgewidth=0.8,
               zorder=8, label=f'Today  ${price[-1]:,.0f}')
 
-    # X ticks as calendar years
-    year_ticks = [2010, 2012, 2014, 2016, 2018, 2020, 2022, 2024]
-    t_ticks    = [(date(y,1,1) - GENESIS).days for y in year_ticks]
-    ax.set_xticks(t_ticks)
-    ax.set_xticklabels([str(y) for y in year_ticks], fontsize=10)
+    # ── X axis: resta in scala LOG, ma con SOLI tick-anno (no notazione sci) ──
+    # Nota: i valori reali su X sono giorni-dal-genesis, non anni → le etichette
+    # vanno mappate a mano con FixedFormatter (ScalarFormatter mostrerebbe i giorni).
+    year_ticks = [2012, 2014, 2016, 2018, 2020, 2022, 2024, 2026]
+    t_ticks    = [(date(y, 1, 1) - GENESIS).days for y in year_ticks]
+
+    # Major ticks: fissati alle posizioni-anno, etichettati come anni "puliti"
+    ax.xaxis.set_major_locator(ticker.FixedLocator(t_ticks))
+    ax.xaxis.set_major_formatter(ticker.FixedFormatter([str(y) for y in year_ticks]))
+
+    # Spegne i minor tick logaritmici automatici (4×10², 6×10³, …) → causa overlap
+    ax.xaxis.set_minor_locator(ticker.NullLocator())
+    ax.xaxis.set_minor_formatter(ticker.NullFormatter())
+
+    # Etichette orizzontali
+    ax.tick_params(axis='x', which='both', rotation=0, labelsize=10)
 
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(
         lambda x, _: f'${x:,.0f}' if x >= 1 else f'${x:.4f}'))
